@@ -5,6 +5,9 @@ info:
 paths:
   /products:
     post:
+      tags:
+        - Product
+      operationId: createNewProduct
       requestBody:
         required: true
         content:
@@ -17,10 +20,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProductId"
+                $ref: "#/components/schemas/CreateNewProductResponse"
 
   /product/{id}:
     put:
+      tags:
+        - Product
+      operationId: setProduct
       parameters:
         - name: id
           in: path
@@ -40,6 +46,9 @@ paths:
         201:
           description: "The product was successfully created"
     delete:
+      tags:
+        - Product
+      operationId: deleteProduct
       parameters:
         - name: id
           in: path
@@ -58,6 +67,8 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 256
         price:
           type: number
           minimum: 0
@@ -72,3 +83,11 @@ components:
       type: string
       minLength: 1
       maxLength: 64
+
+    CreateNewProductResponse:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/ProductId"
+      required:
+        - id
