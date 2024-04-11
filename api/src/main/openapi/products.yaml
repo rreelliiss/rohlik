@@ -1,0 +1,74 @@
+openapi: "3.1.0"
+info:
+  title: Product Management
+  version: 0.0.1
+paths:
+  /products:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Product"
+      responses:
+        201:
+          description: "A product was successfully created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductId"
+
+  /product/{id}:
+    put:
+      parameters:
+        - name: id
+          in: path
+          description: ID of a product to update
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProductId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Product"
+      responses:
+        204:
+          description: "The product was successfully updated"
+        201:
+          description: "The product was successfully created"
+    delete:
+      parameters:
+        - name: id
+          in: path
+          description: ID of a product to update
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProductId"
+      responses:
+        204:
+          description: "The product was deleted"
+
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        name:
+          type: string
+        price:
+          type: number
+          minimum: 0
+        quantity:
+          type: integer
+          minimum: 0
+      required:
+        - name
+
+    ProductId:
+      description: ID of a product
+      type: string
+      minLength: 1
+      maxLength: 64
