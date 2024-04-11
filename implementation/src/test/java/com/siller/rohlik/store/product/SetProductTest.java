@@ -3,7 +3,6 @@ package com.siller.rohlik.store.product;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.siller.rohlik.store.product.model.Product;
 import com.siller.rohlik.store.product.repository.ProductRepository;
-import com.siller.rohlik.store.rest.model.CreateNewProductResponseDto;
 import com.siller.rohlik.store.rest.model.ProductDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,14 +23,17 @@ import static com.siller.rohlik.store.testSupport.Utils.nChars;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+
 @SpringBootTest
 @AutoConfigureMockMvc
-public class CreateProductTest {
+public class SetProductTest {
 
     private static final String PRODUCTS_URL = "/products";
+    private static final String PRODUCT_URL = "/product";
 
     @Autowired
     private MockMvc mockMvc;
@@ -43,44 +45,88 @@ public class CreateProductTest {
     private ObjectMapper objectMapper;
 
     @BeforeEach
-    void beforeEach(){
+    void beforeEach() {
         productRepository.deleteAll();
     }
 
     @Test
-    public void postProduct_returns201AndStoreTheProduct() throws Exception {
+    public void setProductAfterPostProduct_returns204AndUpdateTheProduct() throws Exception {
         ProductDto productDto = new ProductDto()
                 .name("Test Product")
                 .price(new BigDecimal("13.12"))
                 .quantity(5);
 
-        String responseAsString = mockMvc.perform(post(PRODUCTS_URL)
+        mockMvc.perform(post(PRODUCTS_URL)
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(productDto)))
                 .andDo(print())
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+
+        String idOfSavedProduct = productRepository.findAll().get(0).getId();
+
+        ProductDto changedProductDto = new ProductDto()
+                .name("Test Product 2")
+                .price(new BigDecimal("13.22"))
+                .quantity(4);
+
+        mockMvc.perform(put(PRODUCT_URL + "/" + idOfSavedProduct)
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(changedProductDto)))
+                .andDo(print())
+                .andExpect(status().isNoContent());
 
         List<Product> allActualProducts = productRepository.findAll();
         assertEquals(1, allActualProducts.size());
         Product actualProduct = allActualProducts.get(0);
 
-        assertEquals(responseAsString, objectMapper.writeValueAsString(new CreateNewProductResponseDto(actualProduct.getId())));
-        assertEquals("Test Product", actualProduct.getName());
-        assertEquals(13.12, actualProduct.getPrice());
-        assertEquals(5, actualProduct.getQuantity());
+        assertEquals("Test Product 2", actualProduct.getName());
+        assertEquals(13.22, actualProduct.getPrice());
+        assertEquals(4, actualProduct.getQuantity());
+    }
+
+    @Test
+    public void setProductWithNotExistingId_returns404() throws Exception {
+        String idOfSavedProduct = "some-not-existing-id";
+
+        ProductDto productDto = new ProductDto()
+                .name("Test Product 2")
+                .price(new BigDecimal("13.22"))
+                .quantity(4);
+
+        mockMvc.perform(put(PRODUCT_URL + "/" + idOfSavedProduct)
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(productDto)))
+                .andDo(print())
+                .andExpect(status().isNotFound());
+
+        List<Product> allActualProducts = productRepository.findAll();
+        assertEquals(0, allActualProducts.size());
     }
 
 
     @ParameterizedTest(name = "{0}")
-    @MethodSource("com.siller.rohlik.store.product.CreateProductTest#inputsAndExpectedResultsOfValidation")
-    public void postProduct_inputValidations(String testName, ProductDto productDto, ResultMatcher matcher) throws Exception {
+    @MethodSource("com.siller.rohlik.store.product.SetProductTest#inputsAndExpectedResultsOfValidation")
+    public void postProduct_inputValidations(String testName, ProductDto changedProductDto, ResultMatcher matcher) throws Exception {
+
+        ProductDto productDto = new ProductDto()
+                .name("Test Product")
+                .price(new BigDecimal("13.12"))
+                .quantity(5);
+
         mockMvc.perform(post(PRODUCTS_URL)
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(productDto)))
                 .andDo(print())
-                .andExpect(matcher)
-                .andReturn().getResponse().getContentAsString();
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+
+        String idOfSavedProduct = productRepository.findAll().get(0).getId();
+
+        mockMvc.perform(put(PRODUCT_URL + "/" + idOfSavedProduct)
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(changedProductDto)))
+                .andDo(print())
+                .andExpect(matcher);
+
     }
 
     private static Stream<Arguments> inputsAndExpectedResultsOfValidation() {
@@ -91,21 +137,21 @@ public class CreateProductTest {
                         "returns BAD REQUEST when name is null",
                         getFullyPopulatedValidProductDto().name(null),
                         status().isBadRequest()
-                        ),
+                ),
                 Arguments.of(
                         "returns BAD REQUEST when name is empty",
                         getFullyPopulatedValidProductDto().name(""),
                         status().isBadRequest()
                 ),
                 Arguments.of(
-                        "returns CREATED when name is 1 characters long ",
+                        "returns NO CONTENT when name is 1 characters long ",
                         getFullyPopulatedValidProductDto().name("a"),
-                        status().isCreated()
+                        status().isNoContent()
                 ),
                 Arguments.of(
-                        "returns CREATED when name is 256 characters long ",
+                        "returns NO CONTENT when name is 256 characters long ",
                         getFullyPopulatedValidProductDto().name(nChars('a', 256)),
-                        status().isCreated()
+                        status().isNoContent()
                 ),
                 Arguments.of(
                         "returns BAD_REQUEST when name is 257 characters long ",
@@ -118,19 +164,19 @@ public class CreateProductTest {
                         status().isBadRequest()
                 ),
                 Arguments.of(
-                        "returns CREATED when price is 0 ",
+                        "returns NO CONTENT when price is 0 ",
                         getFullyPopulatedValidProductDto().price(new BigDecimal("0")),
-                        status().isCreated()
+                        status().isNoContent()
                 ),
                 Arguments.of(
-                        "returns CREATED when price is positive ",
+                        "returns NO CONTENT when price is positive ",
                         getFullyPopulatedValidProductDto().price(new BigDecimal("10.13")),
-                        status().isCreated()
+                        status().isNoContent()
                 ),
                 Arguments.of(
-                        "returns CREATED when price is null ",
+                        "returns NO CONTENT when price is null ",
                         getFullyPopulatedValidProductDto().price(null),
-                        status().isCreated()
+                        status().isNoContent()
                 ),
                 Arguments.of(
                         "returns BAD REQUEST when quantity is negative",
@@ -138,19 +184,19 @@ public class CreateProductTest {
                         status().isBadRequest()
                 ),
                 Arguments.of(
-                        "returns CREATED when quantity is 0 ",
+                        "returns NO CONTENT when quantity is 0 ",
                         getFullyPopulatedValidProductDto().quantity(0),
-                        status().isCreated()
+                        status().isNoContent()
                 ),
                 Arguments.of(
-                        "returns CREATED when quantity is positive ",
+                        "returns NO CONTENT when quantity is positive ",
                         getFullyPopulatedValidProductDto().quantity(9),
-                        status().isCreated()
+                        status().isNoContent()
                 ),
                 Arguments.of(
-                        "returns CREATED when quantity is null ",
+                        "returns NO CONTENT when quantity is null ",
                         getFullyPopulatedValidProductDto().quantity(null),
-                        status().isCreated()
+                        status().isNoContent()
                 )
         );
     }

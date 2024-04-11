@@ -33,6 +33,14 @@ public class ProductController implements ProductApi {
 
     @Override
     public ResponseEntity<Void> setProduct(String id, ProductDto productDto) {
-        return null;
+        boolean productExists = productRepository.existsById(id);
+        if (productExists) {
+            Product product = productMapper.fromDto(productDto);
+            product.setId(id);
+            productRepository.save(product);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 }
