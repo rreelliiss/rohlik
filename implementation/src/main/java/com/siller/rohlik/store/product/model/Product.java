@@ -8,6 +8,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Entity
 @Data
 public class Product {
@@ -18,6 +20,6 @@ public class Product {
     @Column(length = 256)
     private String name;
     private Integer quantity;
-    private Double price;
+    private BigDecimal price;
 
 }

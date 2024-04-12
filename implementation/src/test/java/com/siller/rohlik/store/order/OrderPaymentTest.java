@@ -2,12 +2,10 @@ package com.siller.rohlik.store.order;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.siller.rohlik.store.order.model.Order;
+import com.siller.rohlik.store.order.model.PaymentErrorCode;
 import com.siller.rohlik.store.product.model.Product;
 import com.siller.rohlik.store.product.repository.ProductRepository;
-import com.siller.rohlik.store.rest.model.order.CreateNewOrderResponseDto;
-import com.siller.rohlik.store.rest.model.order.OrderDto;
-import com.siller.rohlik.store.rest.model.order.OrderItemDto;
-import com.siller.rohlik.store.rest.model.order.WriteableOrderStateDto;
+import com.siller.rohlik.store.rest.model.order.*;
 import com.siller.rohlik.store.rest.model.product.CreateNewProductResponseDto;
 import com.siller.rohlik.store.rest.model.product.ProductDto;
 import jakarta.transaction.Transactional;
@@ -33,6 +31,7 @@ public class OrderPaymentTest {
 
     private static final String PRODUCTS_URL = "/products";
     private static final String ORDERS_URL = "/orders";
+    private static final String ORDERS_PAYMENT_URL_TEMPLATE = "/orders/%s/payment";
     private static final String ORDERS_STATE_URL_TEMPLATE = "/orders/%s/state";
 
     @Autowired
@@ -50,7 +49,6 @@ public class OrderPaymentTest {
     private String productId1;
     private String productId2;
     private String productId3;
-    private String productId4;
 
     @BeforeEach
     void beforeEach() throws Exception {
@@ -76,100 +74,133 @@ public class OrderPaymentTest {
                         .quantity(1)
         );
 
-        productId4 = postProduct(
-                new ProductDto()
-                        .name("Test Product 4")
-                        .price(new BigDecimal("7.0"))
-                        .quantity(0)
-        );
     }
 
     @Test
     @Transactional
-    public void cancelOrder_setStateToCanceledAndReturnProductsToStock() throws Exception {
+    public void paymentOfOrder_setStateToPayed() throws Exception {
         OrderDto order1 = new OrderDto()
                 .addOrderItemsItem(new OrderItemDto().productId(productId1).quantity(2))
                 .addOrderItemsItem(new OrderItemDto().productId(productId2).quantity(1))
                 .addOrderItemsItem(new OrderItemDto().productId(productId3).quantity(1));
 
-        OrderDto order2 = new OrderDto()
-                .addOrderItemsItem(new OrderItemDto().productId(productId1).quantity(1))
-                .addOrderItemsItem(new OrderItemDto().productId(productId2).quantity(2));
-
         String createdOrderId1 = postOrder(order1);
-        postOrder(order2);
 
-        WriteableOrderStateDto writeableOrderStateDto = new WriteableOrderStateDto().state(Order.State.CANCELED.name());
-        mockMvc.perform(put(String.format(ORDERS_STATE_URL_TEMPLATE, createdOrderId1))
+        PaymentDto paymentDto = new PaymentDto().amount(new BigDecimal("30.60"));
+        mockMvc.perform(put(String.format(ORDERS_PAYMENT_URL_TEMPLATE, createdOrderId1))
                         .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(writeableOrderStateDto)))
+                        .content(objectMapper.writeValueAsString(paymentDto)))
                 .andExpect(status().isNoContent());
 
         Order actualOrder = orderRepository.findById(createdOrderId1).get();
-        assertEquals(Order.State.CANCELED, actualOrder.getState());
-
-
-        Product actualProduct1 = productRepository.findById(productId1).get();
-        assertEquals(4, actualProduct1.getQuantity());
-        Product actualProduct2 = productRepository.findById(productId2).get();
-        assertEquals(1, actualProduct2.getQuantity());
-        Product actualProduct3 = productRepository.findById(productId3).get();
-        assertEquals(1, actualProduct3.getQuantity());
-        Product actualProduct4 = productRepository.findById(productId4).get();
-        assertEquals(0, actualProduct4.getQuantity());
+        assertEquals(Order.State.PAYED, actualOrder.getState());
     }
+
 
     @Test
     @Transactional
-    public void canceledOrder_isIdempotent() throws Exception {
-        OrderDto order1 = new OrderDto()
-                .addOrderItemsItem(new OrderItemDto().productId(productId1).quantity(2))
-                .addOrderItemsItem(new OrderItemDto().productId(productId2).quantity(1))
-                .addOrderItemsItem(new OrderItemDto().productId(productId3).quantity(1));
+    public void paymentOfNotExistingOrder_returnsNotFound() throws Exception {
 
-        OrderDto order2 = new OrderDto()
-                .addOrderItemsItem(new OrderItemDto().productId(productId1).quantity(1))
-                .addOrderItemsItem(new OrderItemDto().productId(productId2).quantity(2));
-
-        String createdOrderId1 = postOrder(order1);
-        postOrder(order2);
-
-        WriteableOrderStateDto writeableOrderStateDto = new WriteableOrderStateDto().state(Order.State.CANCELED.name());
-        mockMvc.perform(put(String.format(ORDERS_STATE_URL_TEMPLATE, createdOrderId1))
+        PaymentDto paymentDto = new PaymentDto().amount(new BigDecimal("30.60"));
+        mockMvc.perform(put(String.format(ORDERS_PAYMENT_URL_TEMPLATE, "not-existing-id"))
                         .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(writeableOrderStateDto)))
-                .andExpect(status().isNoContent());
-
-        mockMvc.perform(put(String.format(ORDERS_STATE_URL_TEMPLATE, createdOrderId1))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(writeableOrderStateDto)))
-                .andExpect(status().isNoContent());
-
-        Order actualOrder = orderRepository.findById(createdOrderId1).get();
-        assertEquals(Order.State.CANCELED, actualOrder.getState());
-
-
-        Product actualProduct1 = productRepository.findById(productId1).get();
-        assertEquals(4, actualProduct1.getQuantity());
-        Product actualProduct2 = productRepository.findById(productId2).get();
-        assertEquals(1, actualProduct2.getQuantity());
-        Product actualProduct3 = productRepository.findById(productId3).get();
-        assertEquals(1, actualProduct3.getQuantity());
-        Product actualProduct4 = productRepository.findById(productId4).get();
-        assertEquals(0, actualProduct4.getQuantity());
-    }
-
-    @Test
-    @Transactional
-    public void cancelingNonExistingOrder_Returns404() throws Exception {
-
-        WriteableOrderStateDto writeableOrderStateDto = new WriteableOrderStateDto().state(Order.State.CANCELED.name());
-        mockMvc.perform(put(String.format(ORDERS_STATE_URL_TEMPLATE, "not-existing-order-id"))
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(writeableOrderStateDto)))
+                        .content(objectMapper.writeValueAsString(paymentDto)))
                 .andExpect(status().isNotFound());
 
     }
+
+    @Test
+    @Transactional
+    public void paymentOfOrder_withWrongAmount_isNotAllowed() throws Exception {
+        OrderDto order1 = new OrderDto()
+                .addOrderItemsItem(new OrderItemDto().productId(productId1).quantity(2))
+                .addOrderItemsItem(new OrderItemDto().productId(productId2).quantity(1))
+                .addOrderItemsItem(new OrderItemDto().productId(productId3).quantity(1));
+
+        String createdOrderId1 = postOrder(order1);
+
+        PaymentDto paymentDto = new PaymentDto().amount(new BigDecimal("1.60"));
+        String paymentResponse = mockMvc.perform(put(String.format(ORDERS_PAYMENT_URL_TEMPLATE, createdOrderId1))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(paymentDto)))
+                .andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString();
+
+        CreateNewPaymentErrorResponseDto errorResponse = objectMapper.readValue(paymentResponse, CreateNewPaymentErrorResponseDto.class);
+
+        assertEquals(PaymentErrorCode.WRONG_AMOUNT.name(), errorResponse.getErrorCode());
+
+        Order actualOrder = orderRepository.findById(createdOrderId1).get();
+        assertEquals(Order.State.ACTIVE, actualOrder.getState());
+    }
+
+    @Test
+    @Transactional
+    public void paymentOfCanceledOrder_isNotAllowed() throws Exception {
+        OrderDto order1 = new OrderDto()
+                .addOrderItemsItem(new OrderItemDto().productId(productId1).quantity(2))
+                .addOrderItemsItem(new OrderItemDto().productId(productId2).quantity(1))
+                .addOrderItemsItem(new OrderItemDto().productId(productId3).quantity(1));
+
+
+        String createdOrderId1 = postOrder(order1);
+        cancelOrder(createdOrderId1);
+
+        PaymentDto paymentDto = new PaymentDto().amount(new BigDecimal("30.60"));
+        String paymentResponse = mockMvc.perform(put(String.format(ORDERS_PAYMENT_URL_TEMPLATE, createdOrderId1))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(paymentDto)))
+                .andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString();
+
+        CreateNewPaymentErrorResponseDto errorResponse = objectMapper.readValue(paymentResponse, CreateNewPaymentErrorResponseDto.class);
+
+        assertEquals(PaymentErrorCode.CANNOT_PAY_CANCELED_ORDER.name(), errorResponse.getErrorCode());
+
+        Order actualOrder = orderRepository.findById(createdOrderId1).get();
+        assertEquals(Order.State.CANCELED, actualOrder.getState());
+    }
+
+    @Test
+    @Transactional
+    public void paymentOfPayedOrder_isNotAllowed() throws Exception {
+        OrderDto order1 = new OrderDto()
+                .addOrderItemsItem(new OrderItemDto().productId(productId1).quantity(2))
+                .addOrderItemsItem(new OrderItemDto().productId(productId2).quantity(1))
+                .addOrderItemsItem(new OrderItemDto().productId(productId3).quantity(1));
+
+
+        String createdOrderId1 = postOrder(order1);
+
+        PaymentDto paymentDto = new PaymentDto().amount(new BigDecimal("30.60"));
+        mockMvc.perform(put(String.format(ORDERS_PAYMENT_URL_TEMPLATE, createdOrderId1))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(paymentDto)))
+                .andExpect(status().isNoContent())
+                .andReturn().getResponse().getContentAsString();
+
+        String paymentResponse = mockMvc.perform(put(String.format(ORDERS_PAYMENT_URL_TEMPLATE, createdOrderId1))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(paymentDto)))
+                .andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString();
+
+        CreateNewPaymentErrorResponseDto errorResponse = objectMapper.readValue(paymentResponse, CreateNewPaymentErrorResponseDto.class);
+
+        assertEquals(PaymentErrorCode.ALREADY_PAYED.name(), errorResponse.getErrorCode());
+
+        Order actualOrder = orderRepository.findById(createdOrderId1).get();
+        assertEquals(Order.State.PAYED, actualOrder.getState());
+    }
+
+    private void cancelOrder(String createdOrderId1) throws Exception {
+        WriteableOrderStateDto writeableOrderStateDto = new WriteableOrderStateDto().state(Order.State.CANCELED.name());
+        mockMvc.perform(put(String.format(ORDERS_STATE_URL_TEMPLATE, createdOrderId1))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(writeableOrderStateDto)))
+                .andExpect(status().isNoContent());
+    }
+
 
     private String postOrder(OrderDto orderDto) throws Exception {
         String responseFromSavingOrder = mockMvc.perform(post(ORDERS_URL)

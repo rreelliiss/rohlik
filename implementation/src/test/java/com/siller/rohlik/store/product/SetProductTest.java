@@ -80,7 +80,7 @@ public class SetProductTest {
         Product actualProduct = allActualProducts.get(0);
 
         assertEquals("Test Product 2", actualProduct.getName());
-        assertEquals(13.22, actualProduct.getPrice());
+        assertEquals(new BigDecimal("13.22"), actualProduct.getPrice());
         assertEquals(4, actualProduct.getQuantity());
     }
 

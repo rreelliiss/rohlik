@@ -67,7 +67,7 @@ public class CreateProductTest {
 
         assertEquals(responseAsString, objectMapper.writeValueAsString(new CreateNewProductResponseDto(actualProduct.getId())));
         assertEquals("Test Product", actualProduct.getName());
-        assertEquals(13.12, actualProduct.getPrice());
+        assertEquals(new BigDecimal("13.12"), actualProduct.getPrice());
         assertEquals(5, actualProduct.getQuantity());
     }
 

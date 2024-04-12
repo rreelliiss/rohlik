@@ -52,8 +52,8 @@ paths:
         404:
           description: "The order was not found"
 
-  /orders/{orderId}/payments:
-    post:
+  /orders/{orderId}/payment:
+    put:
       tags:
         - OrderPayments
       operationId: createPayment
@@ -122,8 +122,8 @@ components:
     Payment:
       type: object
       properties:
-        successful:
-          type: boolean
+        amount:
+          type: number
 
     CreateNewOrderResponse:
       type: object
