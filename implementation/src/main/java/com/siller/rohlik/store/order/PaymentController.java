@@ -5,6 +5,7 @@ import com.siller.rohlik.store.order.model.PaymentErrorCode;
 import com.siller.rohlik.store.rest.api.order.OrderPaymentsApi;
 import com.siller.rohlik.store.rest.model.order.CreateNewPaymentErrorResponseDto;
 import com.siller.rohlik.store.rest.model.order.PaymentDto;
+import jakarta.transaction.Transactional;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,8 +21,10 @@ import java.util.Optional;
 public class PaymentController implements OrderPaymentsApi {
 
     private final OrderRepository orderRepository;
+    private final ActiveOrderMetadataRepository activeOrderMetadataRepository;
 
     @Override
+    @Transactional
     public ResponseEntity<Void> createPayment(String orderId, PaymentDto paymentDto) {
         Optional<Order> potentialOrder = orderRepository.findById(orderId);
         if (potentialOrder.isPresent()) {
@@ -39,6 +42,7 @@ public class PaymentController implements OrderPaymentsApi {
                 throw new PaymentErrorException(PaymentErrorCode.WRONG_AMOUNT);
             }
             order.setState(Order.State.PAYED);
+            activeOrderMetadataRepository.deleteByOrder(order);
             orderRepository.save(order);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         } else {

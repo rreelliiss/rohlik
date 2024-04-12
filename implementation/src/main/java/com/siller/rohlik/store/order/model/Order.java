@@ -24,6 +24,6 @@ public class Order {
     public enum State {
         ACTIVE,
         CANCELED,
-        PAYED
+        INVALIDATED, PAYED
     }
 }

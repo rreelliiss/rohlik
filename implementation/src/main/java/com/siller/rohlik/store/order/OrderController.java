@@ -1,14 +1,15 @@
 package com.siller.rohlik.store.order;
 
+import com.siller.rohlik.store.order.model.ActiveOrderMetadata;
 import com.siller.rohlik.store.order.model.CreateNewOrderError;
 import com.siller.rohlik.store.order.model.Order;
 import com.siller.rohlik.store.order.model.OrderItem;
+import com.siller.rohlik.store.product.ProductService;
 import com.siller.rohlik.store.product.model.Product;
 import com.siller.rohlik.store.product.repository.ProductRepository;
 import com.siller.rohlik.store.rest.api.order.OrdersApi;
 import com.siller.rohlik.store.rest.model.order.*;
 import jakarta.transaction.Transactional;
-import jakarta.validation.ValidationException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.sql.Timestamp;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -25,7 +27,9 @@ import java.util.Optional;
 public class OrderController implements OrdersApi {
 
     private final OrderRepository orderRepository;
+    private final ActiveOrderMetadataRepository activeOrderMetadataRepository;
     private final ProductRepository productRepository;
+    private final ProductService productService;
 
     @Override
     @Transactional
@@ -66,8 +70,12 @@ public class OrderController implements OrdersApi {
         if (!errors.isEmpty()) {
             throw new CreateNewOrderException(errors);
         }
+
+        ActiveOrderMetadata activeOrderMetadata = new ActiveOrderMetadata(order, new Timestamp(System.currentTimeMillis()));
         productRepository.saveAll(productsToUpdate);
         order = orderRepository.save(order);
+        activeOrderMetadataRepository.save(activeOrderMetadata);
+
         return new ResponseEntity<>(new CreateNewOrderResponseDto(order.getId()), HttpStatus.CREATED);
     }
 
@@ -78,14 +86,8 @@ public class OrderController implements OrdersApi {
             Order order = optionalOrder.get();
             if(!order.getState().equals(Order.State.CANCELED)) {
                 order.setState(Order.State.CANCELED);
-                for (OrderItem orderItem : order.getItems()) {
-                    Optional<Product> potentialProduct = productRepository.findById(orderItem.getProduct().getId());
-                    if (potentialProduct.isPresent()) {
-                        Product product = potentialProduct.get();
-                        product.setQuantity(product.getQuantity() + orderItem.getQuantity());
-                        productRepository.save(product);
-                    }
-                }
+                productService.returnProducts(order);
+                activeOrderMetadataRepository.deleteByOrder(order);
                 orderRepository.save(order);
             }
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
