@@ -3,7 +3,7 @@ package com.siller.rohlik.store.product;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.siller.rohlik.store.product.model.Product;
 import com.siller.rohlik.store.product.repository.ProductRepository;
-import com.siller.rohlik.store.rest.model.ProductDto;
+import com.siller.rohlik.store.rest.model.product.ProductDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

@@ -57,6 +57,13 @@ paths:
       tags:
         - OrderPayments
       operationId: createPayment
+      parameters:
+        - name: orderId
+          in: path
+          description: ID of an order which state should be updated
+          required: true
+          schema:
+            $ref: "#/components/schemas/OrderId"
       requestBody:
         required: true
         content:
@@ -94,8 +101,9 @@ components:
           type: integer
           min: 1
           default: 1
-        required:
-          - productId
+      required:
+        - productId
+        - quantity
 
     OrderId:
       description: ID of an order
@@ -104,9 +112,12 @@ components:
       maxLength: 64
 
     WriteableOrderState:
-      type: string
-      x-extensible-enum:
-        - CANCELED
+      type: object
+      properties:
+        state:
+          type: string
+          x-extensible-enum:
+            - CANCELED
 
     Payment:
       type: object
@@ -139,7 +150,7 @@ components:
           type: string
           x-extensible-enum:
             - INVALID_PRODUCT
-            - OUT_OF_STOCK
+            - NOT_ENOUGH_PRODUCTS_ON_STOCK
 
     CreateNewPaymentErrorResponse:
       type: object
@@ -148,4 +159,6 @@ components:
           type: string
           x-extensible-enum:
             - CANNOT_PAY_CANCELED_ORDER
+            - WRONG_AMOUNT
+            - ALREADY_PAYED
 

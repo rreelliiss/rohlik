@@ -97,6 +97,7 @@
                 <version>7.1.0</version>
                 <executions>
                     <execution>
+                        <id>generate products</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
@@ -105,8 +106,30 @@
                                 ${project.parent.basedir}/api/src/main/openapi/products.yaml
                             </inputSpec>
                             <generatorName>spring</generatorName>
-                            <apiPackage>com.siller.rohlik.store.rest.api</apiPackage>
-                            <modelPackage>com.siller.rohlik.store.rest.model</modelPackage>
+                            <apiPackage>com.siller.rohlik.store.rest.api.product</apiPackage>
+                            <modelPackage>com.siller.rohlik.store.rest.model.product</modelPackage>
+                            <modelNameSuffix>Dto</modelNameSuffix>
+                            <generateSupportingFiles>false</generateSupportingFiles>
+                            <configOptions>
+                                <interfaceOnly>true</interfaceOnly>
+                                <useTags>true</useTags>
+                                <skipDefaultInterface>true</skipDefaultInterface>
+                                <useSpringBoot3>true</useSpringBoot3>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generate orders</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>
+                                ${project.parent.basedir}/api/src/main/openapi/orders.yaml
+                            </inputSpec>
+                            <generatorName>spring</generatorName>
+                            <apiPackage>com.siller.rohlik.store.rest.api.order</apiPackage>
+                            <modelPackage>com.siller.rohlik.store.rest.model.order</modelPackage>
                             <modelNameSuffix>Dto</modelNameSuffix>
                             <generateSupportingFiles>false</generateSupportingFiles>
                             <configOptions>
