@@ -1,0 +1,151 @@
+openapi: "3.1.0"
+info:
+  title: Order Management
+  version: 0.0.1
+paths:
+  /orders:
+    post:
+      tags:
+        - Orders
+      operationId: createNewOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Order"
+      responses:
+        201:
+          description: "An order was successfully created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateNewOrderResponse"
+        400:
+          description: "Order cannot be created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateNewOrderErrorResponse"
+
+  /orders/{orderId}/state:
+    put:
+      tags:
+        - Orders
+      operationId: setOrderState
+      parameters:
+        - name: orderId
+          in: path
+          description: ID of an order which state should be updated
+          required: true
+          schema:
+            $ref: "#/components/schemas/OrderId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WriteableOrderState"
+      responses:
+        204:
+          description: "The order's state was successfully updated"
+        404:
+          description: "The order was not found"
+
+  /orders/{orderId}/payments:
+    post:
+      tags:
+        - OrderPayments
+      operationId: createPayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Payment"
+      responses:
+        201:
+          description: "Payment was successfully created"
+        400:
+          description: "Payment was not accepted"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateNewPaymentErrorResponse"
+        404:
+          description: "The order was not found"
+
+components:
+  schemas:
+    Order:
+      type: object
+      properties:
+        orderItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+
+    OrderItem:
+      type: object
+      properties:
+        productId:
+          $ref: "./products.yaml#/components/schemas/ProductId"
+        quantity:
+          type: integer
+          min: 1
+          default: 1
+        required:
+          - productId
+
+    OrderId:
+      description: ID of an order
+      type: string
+      minLength: 1
+      maxLength: 64
+
+    WriteableOrderState:
+      type: string
+      x-extensible-enum:
+        - CANCELED
+
+    Payment:
+      type: object
+      properties:
+        successful:
+          type: boolean
+
+    CreateNewOrderResponse:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/OrderId"
+      required:
+        - id
+
+    CreateNewOrderErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateNewOrderError"
+
+    CreateNewOrderError:
+      type: object
+      properties:
+        productId:
+          $ref: "./products.yaml#/components/schemas/ProductId"
+        errorCode:
+          type: string
+          x-extensible-enum:
+            - INVALID_PRODUCT
+            - OUT_OF_STOCK
+
+    CreateNewPaymentErrorResponse:
+      type: object
+      properties:
+        errorCode:
+          type: string
+          x-extensible-enum:
+            - CANNOT_PAY_CANCELED_ORDER
+
