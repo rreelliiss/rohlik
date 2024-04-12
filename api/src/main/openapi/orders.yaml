@@ -100,10 +100,8 @@ components:
         quantity:
           type: integer
           min: 1
-          default: 1
       required:
         - productId
-        - quantity
 
     OrderId:
       description: ID of an order

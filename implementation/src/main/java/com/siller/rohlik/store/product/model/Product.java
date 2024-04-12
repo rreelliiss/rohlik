@@ -22,4 +22,11 @@ public class Product {
     private Integer quantity;
     private BigDecimal price;
 
+    public boolean doesNotHaveEnoughQuantity(int quantity) {
+        return this.quantity < quantity;
+    }
+
+    public boolean isNotFinished(){
+        return quantity == null || price == null;
+    }
 }

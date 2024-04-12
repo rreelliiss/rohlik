@@ -34,13 +34,21 @@ public class OrderController implements OrdersApi {
         Order order = new Order();
         order.setState(Order.State.ACTIVE);
         List<Product> productsToUpdate = new LinkedList<>();
-        List<CreateNewOrderError> errors = new LinkedList();
+        List<CreateNewOrderError> errors = new LinkedList<>();
         for (OrderItemDto orderItemDto : orderDto.getOrderItems()) {
+            if(orderItemDto.getQuantity() == null) {
+                errors.add(new CreateNewOrderError(orderItemDto.getProductId(), CreateNewOrderError.Code.MISSING_QUANTITY));
+                continue;
+            }
             OrderItem orderItem = new OrderItem();
             Optional<Product> potentialProduct = productRepository.findById(orderItemDto.getProductId());
             if (potentialProduct.isPresent()) {
                 Product product = potentialProduct.get();
-                if (product.getQuantity() < orderItemDto.getQuantity()) {
+                if(product.isNotFinished()){
+                    errors.add(new CreateNewOrderError(orderItemDto.getProductId(), CreateNewOrderError.Code.UNFINISHED_PRODUCT));
+                    continue;
+                }
+                if (product.doesNotHaveEnoughQuantity(orderItemDto.getQuantity())) {
                     errors.add(new CreateNewOrderError(orderItemDto.getProductId(), CreateNewOrderError.Code.NOT_ENOUGH_PRODUCTS_ON_STOCK));
                     continue;
                 }

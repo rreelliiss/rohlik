@@ -50,6 +50,7 @@ public class CreateOrderTest {
     private String productId2;
     private String productId3;
     private String productId4;
+    private String productWithoutPriceId;
 
     @BeforeEach
     void beforeEach() throws Exception {
@@ -80,6 +81,12 @@ public class CreateOrderTest {
                         .name("Test Product 4")
                         .price(new BigDecimal("7.0"))
                         .quantity(0)
+        );
+
+        productWithoutPriceId = postProduct(
+                new ProductDto()
+                        .name("Test Product 5")
+                        .quantity(5)
         );
     }
 
@@ -132,10 +139,12 @@ public class CreateOrderTest {
     }
 
     @Test
-    public void createOrder_withInvalidProductAndWithTooHighQuantityOfExistingProduct_returnsBadRequest() throws Exception {
+    public void createOrder_withInvalidOrderItems_returnsBadRequest() throws Exception {
         OrderDto orderDto = new OrderDto()
                 .addOrderItemsItem(new OrderItemDto().productId("invalidProductId").quantity(3))
-                .addOrderItemsItem(new OrderItemDto().productId(productId1).quantity(75));
+                .addOrderItemsItem(new OrderItemDto().productId(productId1).quantity(75))
+                .addOrderItemsItem(new OrderItemDto().productId(productId2))
+                .addOrderItemsItem(new OrderItemDto().productId(productWithoutPriceId).quantity(2));
 
         String errorResponseFromSavingOrder = mockMvc.perform(post(ORDERS_URL)
                         .contentType(APPLICATION_JSON)
@@ -145,51 +154,22 @@ public class CreateOrderTest {
 
         CreateNewOrderErrorResponseDto errorResponse = objectMapper.readValue(errorResponseFromSavingOrder, CreateNewOrderErrorResponseDto.class);
 
+        assertEquals(4, errorResponse.getErrors().size());
+
         assertEquals("invalidProductId", errorResponse.getErrors().get(0).getProductId());
         assertEquals(CreateNewOrderError.Code.INVALID_PRODUCT.name(), errorResponse.getErrors().get(0).getErrorCode());
 
         assertEquals(productId1, errorResponse.getErrors().get(1).getProductId());
         assertEquals(CreateNewOrderError.Code.NOT_ENOUGH_PRODUCTS_ON_STOCK.name(), errorResponse.getErrors().get(1).getErrorCode());
+
+        assertEquals(productId2, errorResponse.getErrors().get(2).getProductId());
+        assertEquals(CreateNewOrderError.Code.MISSING_QUANTITY.name(), errorResponse.getErrors().get(2).getErrorCode());
+
+        assertEquals(productWithoutPriceId, errorResponse.getErrors().get(3).getProductId());
+        assertEquals(CreateNewOrderError.Code.UNFINISHED_PRODUCT.name(), errorResponse.getErrors().get(3).getErrorCode());
     }
 
-    @Test
-    @Transactional
-    public void createOrder_withMissingQuantity() throws Exception {
-        OrderDto orderDto = new OrderDto()
-                .addOrderItemsItem(new OrderItemDto().productId(productId1));
 
-
-        String responseFromSavingOrder = mockMvc.perform(post(ORDERS_URL)
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(orderDto)))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-
-        String createdOrderId = objectMapper.readValue(responseFromSavingOrder, CreateNewOrderResponseDto.class).getId();
-
-        List<Order> actualOrders = orderRepository.findAll();
-        Order actualOrder = actualOrders.get(0);
-        assertEquals(1, actualOrders.size());
-
-        assertEquals(createdOrderId, actualOrder.getId());
-        assertEquals(Order.State.ACTIVE, actualOrder.getState());
-
-        assertEquals(1, actualOrder.getItems().size());
-        assertEquals(productId1, actualOrder.getItems().get(0).getProduct().getId());
-        assertEquals(4, actualOrder.getItems().get(0).getProduct().getQuantity());
-        assertEquals(1, actualOrder.getItems().get(0).getQuantity());
-
-
-        Product actualProduct1 = productRepository.findById(productId1).get();
-        assertEquals(4, actualProduct1.getQuantity());
-        Product actualProduct2 = productRepository.findById(productId2).get();
-        assertEquals(3, actualProduct2.getQuantity());
-        Product actualProduct3 = productRepository.findById(productId3).get();
-        assertEquals(1, actualProduct3.getQuantity());
-        Product actualProduct4 = productRepository.findById(productId4).get();
-        assertEquals(0, actualProduct4.getQuantity());
-
-    }
 
     @Test
     public void createOrder_withMissingProductId_returnsBadRequest() throws Exception {

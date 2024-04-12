@@ -11,7 +11,7 @@ public class CreateNewOrderError {
 
     public enum Code {
         INVALID_PRODUCT,
-        NOT_ENOUGH_PRODUCTS_ON_STOCK
+        MISSING_QUANTITY, UNFINISHED_PRODUCT, NOT_ENOUGH_PRODUCTS_ON_STOCK
     }
 
 }
