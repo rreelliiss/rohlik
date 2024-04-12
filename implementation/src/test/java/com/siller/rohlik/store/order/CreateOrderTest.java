@@ -3,6 +3,8 @@ package com.siller.rohlik.store.order;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.siller.rohlik.store.order.model.CreateNewOrderError;
 import com.siller.rohlik.store.order.model.Order;
+import com.siller.rohlik.store.order.repository.ActiveOrderMetadataRepository;
+import com.siller.rohlik.store.order.repository.OrderRepository;
 import com.siller.rohlik.store.product.model.Product;
 import com.siller.rohlik.store.product.repository.ProductRepository;
 import com.siller.rohlik.store.rest.model.order.CreateNewOrderErrorResponseDto;
@@ -12,6 +14,7 @@ import com.siller.rohlik.store.rest.model.order.OrderItemDto;
 import com.siller.rohlik.store.rest.model.product.CreateNewProductResponseDto;
 import com.siller.rohlik.store.rest.model.product.ProductDto;
 import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +47,9 @@ public class CreateOrderTest {
     private OrderRepository orderRepository;
 
     @Autowired
+    private ActiveOrderMetadataRepository activeOrderMetadataRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     private String productId1;
@@ -51,6 +57,13 @@ public class CreateOrderTest {
     private String productId3;
     private String productId4;
     private String productWithoutPriceId;
+
+    @AfterEach
+    void cleanDb(){
+        activeOrderMetadataRepository.deleteAll();
+        orderRepository.deleteAll();
+        productRepository.deleteAll();
+    }
 
     @BeforeEach
     void beforeEach() throws Exception {

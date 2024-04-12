@@ -1,11 +1,7 @@
 package com.siller.rohlik.store.product.model;
 
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -28,5 +24,9 @@ public class Product {
 
     public boolean isNotFinished(){
         return quantity == null || price == null;
+    }
+
+    public void reduceQuantityBy(int quantity) {
+        this.quantity -= quantity;
     }
 }

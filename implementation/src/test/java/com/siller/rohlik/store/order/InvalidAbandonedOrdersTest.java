@@ -2,8 +2,9 @@ package com.siller.rohlik.store.order;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.siller.rohlik.store.order.model.ActiveOrderMetadata;
 import com.siller.rohlik.store.order.model.Order;
+import com.siller.rohlik.store.order.repository.ActiveOrderMetadataRepository;
+import com.siller.rohlik.store.order.repository.OrderRepository;
 import com.siller.rohlik.store.product.model.Product;
 import com.siller.rohlik.store.product.repository.ProductRepository;
 import com.siller.rohlik.store.rest.model.order.CreateNewOrderResponseDto;
@@ -12,7 +13,7 @@ import com.siller.rohlik.store.rest.model.order.OrderItemDto;
 import com.siller.rohlik.store.rest.model.order.PaymentDto;
 import com.siller.rohlik.store.rest.model.product.CreateNewProductResponseDto;
 import com.siller.rohlik.store.rest.model.product.ProductDto;
-import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +22,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,6 +63,13 @@ public class InvalidAbandonedOrdersTest {
     private String productId2;
     private String productId3;
     private String productId4;
+
+    @AfterEach
+    void cleanDb(){
+        activeOrderMetadataRepository.deleteAll();
+        orderRepository.deleteAll();
+        productRepository.deleteAll();
+    }
 
     @BeforeEach
     void beforeEach() throws Exception {

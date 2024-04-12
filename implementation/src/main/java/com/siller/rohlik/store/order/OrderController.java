@@ -1,15 +1,11 @@
 package com.siller.rohlik.store.order;
 
-import com.siller.rohlik.store.order.model.ActiveOrderMetadata;
 import com.siller.rohlik.store.order.model.CreateNewOrderError;
 import com.siller.rohlik.store.order.model.Order;
-import com.siller.rohlik.store.order.model.OrderItem;
-import com.siller.rohlik.store.product.ProductService;
-import com.siller.rohlik.store.product.model.Product;
-import com.siller.rohlik.store.product.repository.ProductRepository;
 import com.siller.rohlik.store.rest.api.order.OrdersApi;
 import com.siller.rohlik.store.rest.model.order.*;
 import jakarta.transaction.Transactional;
+import jakarta.validation.ValidationException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,8 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.sql.Timestamp;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,73 +20,32 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class OrderController implements OrdersApi {
 
-    private final OrderRepository orderRepository;
-    private final ActiveOrderMetadataRepository activeOrderMetadataRepository;
-    private final ProductRepository productRepository;
-    private final ProductService productService;
+
+    private final OrderService orderService;
+
 
     @Override
     @Transactional
     public ResponseEntity<CreateNewOrderResponseDto> createNewOrder(OrderDto orderDto) {
-
-        Order order = new Order();
-        order.setState(Order.State.ACTIVE);
-        List<Product> productsToUpdate = new LinkedList<>();
-        List<CreateNewOrderError> errors = new LinkedList<>();
-        for (OrderItemDto orderItemDto : orderDto.getOrderItems()) {
-            if(orderItemDto.getQuantity() == null) {
-                errors.add(new CreateNewOrderError(orderItemDto.getProductId(), CreateNewOrderError.Code.MISSING_QUANTITY));
-                continue;
-            }
-            OrderItem orderItem = new OrderItem();
-            Optional<Product> potentialProduct = productRepository.findById(orderItemDto.getProductId());
-            if (potentialProduct.isPresent()) {
-                Product product = potentialProduct.get();
-                if(product.isNotFinished()){
-                    errors.add(new CreateNewOrderError(orderItemDto.getProductId(), CreateNewOrderError.Code.UNFINISHED_PRODUCT));
-                    continue;
-                }
-                if (product.doesNotHaveEnoughQuantity(orderItemDto.getQuantity())) {
-                    errors.add(new CreateNewOrderError(orderItemDto.getProductId(), CreateNewOrderError.Code.NOT_ENOUGH_PRODUCTS_ON_STOCK));
-                    continue;
-                }
-                orderItem.setProduct(product);
-                orderItem.setQuantity(orderItemDto.getQuantity());
-                orderItem.setOrder(order);
-                order.getItems().add(orderItem);
-                product.setQuantity(product.getQuantity() - orderItem.getQuantity());
-                productsToUpdate.add(product);
-            } else {
-                errors.add(new CreateNewOrderError(orderItemDto.getProductId(), CreateNewOrderError.Code.INVALID_PRODUCT));
-            }
-
-        }
-        if (!errors.isEmpty()) {
-            throw new CreateNewOrderException(errors);
-        }
-
-        ActiveOrderMetadata activeOrderMetadata = new ActiveOrderMetadata(order, new Timestamp(System.currentTimeMillis()));
-        productRepository.saveAll(productsToUpdate);
-        order = orderRepository.save(order);
-        activeOrderMetadataRepository.save(activeOrderMetadata);
-
+        Order order = orderService.createOrder(orderDto);
         return new ResponseEntity<>(new CreateNewOrderResponseDto(order.getId()), HttpStatus.CREATED);
     }
 
     @Override
     public ResponseEntity<Void> setOrderState(String orderId, WriteableOrderStateDto writeableOrderStateDto) {
-        Optional<Order> optionalOrder = orderRepository.findById(orderId);
+        validateRequestedState(writeableOrderStateDto);
+        Optional<Order> optionalOrder = orderService.findById(orderId);
         if (optionalOrder.isPresent()) {
-            Order order = optionalOrder.get();
-            if(!order.getState().equals(Order.State.CANCELED)) {
-                order.setState(Order.State.CANCELED);
-                productService.returnProducts(order);
-                activeOrderMetadataRepository.deleteByOrder(order);
-                orderRepository.save(order);
-            }
+            orderService.cancelOrder(optionalOrder.get());
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    private static void validateRequestedState(WriteableOrderStateDto writeableOrderStateDto) {
+        if (!writeableOrderStateDto.getState().equals(Order.State.CANCELED.name())) {
+            throw new ValidationException("Only allowed state to write is " + Order.State.CANCELED);
         }
     }
 

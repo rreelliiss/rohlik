@@ -1,11 +1,13 @@
 package com.siller.rohlik.store.product;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.siller.rohlik.store.order.repository.ActiveOrderMetadataRepository;
+import com.siller.rohlik.store.order.repository.OrderRepository;
 import com.siller.rohlik.store.product.model.Product;
 import com.siller.rohlik.store.product.repository.ProductRepository;
 import com.siller.rohlik.store.rest.model.product.CreateNewProductResponseDto;
 import com.siller.rohlik.store.rest.model.product.ProductDto;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -17,7 +19,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,10 +38,18 @@ public class DeleteProductTest {
     private ProductRepository productRepository;
 
     @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private ActiveOrderMetadataRepository activeOrderMetadataRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
-    @BeforeEach
-    void beforeEach() {
+    @AfterEach
+    void cleanDb(){
+        activeOrderMetadataRepository.deleteAll();
+        orderRepository.deleteAll();
         productRepository.deleteAll();
     }
 

@@ -1,4 +1,4 @@
-package com.siller.rohlik.store.order.model;
+package com.siller.rohlik.store.payment.model;
 
 public enum PaymentErrorCode {
     CANNOT_PAY_CANCELED_ORDER,

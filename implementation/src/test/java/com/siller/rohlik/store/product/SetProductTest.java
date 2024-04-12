@@ -1,10 +1,12 @@
 package com.siller.rohlik.store.product;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.siller.rohlik.store.order.repository.ActiveOrderMetadataRepository;
+import com.siller.rohlik.store.order.repository.OrderRepository;
 import com.siller.rohlik.store.product.model.Product;
 import com.siller.rohlik.store.product.repository.ProductRepository;
 import com.siller.rohlik.store.rest.model.product.ProductDto;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -42,10 +44,18 @@ public class SetProductTest {
     private ProductRepository productRepository;
 
     @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private ActiveOrderMetadataRepository activeOrderMetadataRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
-    @BeforeEach
-    void beforeEach() {
+    @AfterEach
+    void cleanDb(){
+        activeOrderMetadataRepository.deleteAll();
+        orderRepository.deleteAll();
         productRepository.deleteAll();
     }
 

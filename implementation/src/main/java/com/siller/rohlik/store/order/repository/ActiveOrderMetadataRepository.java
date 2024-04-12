@@ -1,4 +1,4 @@
-package com.siller.rohlik.store.order;
+package com.siller.rohlik.store.order.repository;
 
 import com.siller.rohlik.store.order.model.ActiveOrderMetadata;
 import com.siller.rohlik.store.order.model.Order;

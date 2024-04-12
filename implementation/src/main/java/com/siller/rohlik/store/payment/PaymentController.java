@@ -1,7 +1,9 @@
-package com.siller.rohlik.store.order;
+package com.siller.rohlik.store.payment;
 
 import com.siller.rohlik.store.order.model.Order;
-import com.siller.rohlik.store.order.model.PaymentErrorCode;
+import com.siller.rohlik.store.order.repository.ActiveOrderMetadataRepository;
+import com.siller.rohlik.store.order.repository.OrderRepository;
+import com.siller.rohlik.store.payment.model.PaymentErrorCode;
 import com.siller.rohlik.store.rest.api.order.OrderPaymentsApi;
 import com.siller.rohlik.store.rest.model.order.CreateNewPaymentErrorResponseDto;
 import com.siller.rohlik.store.rest.model.order.PaymentDto;
